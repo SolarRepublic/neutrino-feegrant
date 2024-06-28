@@ -1,6 +1,6 @@
 import type {WeakSecretAccAddr} from '@solar-republic/neutrino';
 
-import {__UNDEFINED, assign, die, entries, hex_to_bytes, parse_json_safe, type Dict} from '@blake.regalia/belt';
+import {__UNDEFINED, assign, die, entries, hex_to_bytes, parse_json_safe, stringify_json, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE, encodeCosmosFeegrantMsgGrantAllowance, encodeCosmosFeegrantMsgRevokeAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/tx';
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
@@ -45,8 +45,8 @@ if(!XG_ALLOWANCE) {
 const S_MEMO = process.env.FEEGRANT_MEMO || '';
 
 // gas limits
-const XG_LIMIT_GRANT = 14_000n;
-const XG_LIMIT_REVOKE = 12_000n;
+const XG_LIMIT_GRANT = 15_000n;
+const XG_LIMIT_REVOKE = 15_000n;
 
 // create server's feegranter wallet
 const k_wallet = await Wallet(
@@ -215,6 +215,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 
 	// failed
 	if(xc_code) {
+		console.error(`code:${xc_code}; res:${sx_res}; meta:${stringify_json(g_meta)}`);
 		return d_res.code(550).send(parse_json_safe(sx_res) || sx_res);
 	}
 
