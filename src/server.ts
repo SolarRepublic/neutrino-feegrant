@@ -12,8 +12,9 @@ import { queryCosmosFeegrantAllowance } from '@solar-republic/cosmos-grpc/cosmos
 import assert from 'assert';
 
 // check server secret key
-if(64 !== process.env.SERVER_SK?.length) {
-	throw Error(`Invalid server secret key; must be 64 hexadecimal digits. SERVER_SK is ${process.env.SERVER_SK? 'the wrong length': 'empty'}`);
+const SB16_SERVER_SK = (process.env.SERVER_SK || '').replace(/^0x/, '');
+if(64 !== SB16_SERVER_SK.length) {
+	throw Error(`Invalid server secret key; must be 64 hexadecimal digits. SERVER_SK is ${SB16_SERVER_SK? 'the wrong length': 'empty'}`);
 }
 
 // check LCD
@@ -29,20 +30,21 @@ if(!/^https?:\/\//.test(P_RPC_SECRET)) {
 }
 
 // check gas price
-const x_gas_price = parseFloat(process.env.GAS_PRICE);
-if(isNaN(x_gas_price) || !(x_gas_price > 0)) {
-	throw Error(`Invalid gas price setting: ${x_gas_price}; try setting env var GAS_PRICE=0.1`);
+const X_GAS_PRICE = parseFloat(process.env.GAS_PRICE);
+if(isNaN(X_GAS_PRICE) || !(X_GAS_PRICE > 0)) {
+	throw Error(`Invalid gas price setting: ${X_GAS_PRICE}; try setting env var GAS_PRICE=0.1`);
 }
 
 // check allowance amount
-const xg_allowance = BigInt(process.env.ALLOWANCE_AMOUNT);
-if(!xg_allowance) {
-	throw Error(`Invalid allowance amount setting: ${xg_allowance}; try setting env var ALLOWANCE_AMOUNT=500000`);
+const XG_ALLOWANCE = BigInt(process.env.ALLOWANCE_AMOUNT);
+if(!XG_ALLOWANCE) {
+	throw Error(`Invalid allowance amount setting: ${XG_ALLOWANCE}; try setting env var ALLOWANCE_AMOUNT=500000`);
 }
 
 // set optional memo
 const S_MEMO = process.env.FEEGRANT_MEMO || '';
 
+// gas limits
 const XG_LIMIT_GRANT = 14_000n;
 const XG_LIMIT_REVOKE = 12_000n;
 
@@ -68,7 +70,7 @@ async function exec_msgs(
 	xg_limit: bigint,
 ) {
 	// create and sign tx
-	const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, [atu8_msg], exec_fees(xg_limit, x_gas_price), `${xg_limit}`, 0, S_MEMO);
+	const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, [atu8_msg], exec_fees(xg_limit, X_GAS_PRICE), `${xg_limit}`, 0, S_MEMO);
 
 	// broadcast
 	return await broadcast_result(k_wallet, atu8_raw, si_txn);
@@ -164,7 +166,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 		const xt_remaining = xt_expiration - Date.now();
 
 		// amount is still full
-		if(a_limits?.[0]?.amount === `${xg_allowance}`) {
+		if(a_limits?.[0]?.amount === `${XG_ALLOWANCE}`) {
 			// feegrant still has more than an hour left
 			if(xt_remaining > 36e5) {
 				return d_res.code(400).send({
@@ -206,7 +208,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 	);
 
 	// create and sign tx
-	const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, [atu8_msg], exec_fees(XG_LIMIT_GRANT, x_gas_price), `${XG_LIMIT_GRANT}`, 0, S_MEMO);
+	const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, [atu8_msg], exec_fees(XG_LIMIT_GRANT, X_GAS_PRICE), `${XG_LIMIT_GRANT}`, 0, S_MEMO);
 
 	// broadcast
 	const [xc_code, sx_res, g_meta, atu8_result, h_events] = await broadcast_result(k_wallet, atu8_raw, si_txn, K_TEF_SECRET);
