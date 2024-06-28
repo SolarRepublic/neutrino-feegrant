@@ -1,0 +1,40 @@
+{
+  "name": "neutrino-feegrant",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "bun --env-file=.env run src/server.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@blake.regalia/belt": "^0.37.0",
+    "@solar-republic/cosmos-grpc": "^0.17.1",
+    "@solar-republic/crypto": "^0.2.14",
+    "@solar-republic/neutrino": "^1.4.7",
+    "fastify": "^4.28.0"
+  },
+  "devDependencies": {
+    "@blake.regalia/tsconfig": "^0.2.0",
+    "@solar-republic/types": "^0.2.12",
+    "@types/chai": "^4.3.16",
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.14.9",
+    "@types/web": "^0.0.150",
+    "@typescript-eslint/parser": "^7.14.1",
+    "chai": "^5.1.1",
+    "chai-bites": "^0.2.0",
+    "esformatter": "^0.11.3",
+    "eslint": "^8.57.0",
+    "ts-node": "^10.9.2",
+    "ts-toolbelt": "^9.6.0",
+    "tsc-esm-fix": "^2.20.27",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.5.2",
+    "vite": "^5.3.1",
+    "vitest": "^1.6.0"
+  }
+}
