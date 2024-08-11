@@ -11,20 +11,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@blake.regalia/belt": "^0.37.0",
+    "@blake.regalia/belt": "^0.38.1",
     "@solar-republic/cosmos-grpc": "^0.17.1",
     "@solar-republic/crypto": "^0.2.14",
-    "@solar-republic/neutrino": "^1.4.7",
-    "fastify": "^4.28.0"
+    "@solar-republic/neutrino": "^1.5.3",
+    "fastify": "^4.28.1"
   },
   "devDependencies": {
     "@blake.regalia/tsconfig": "^0.2.0",
     "@solar-republic/types": "^0.2.12",
-    "@types/chai": "^4.3.16",
-    "@types/chrome": "^0.0.268",
-    "@types/node": "^20.14.9",
-    "@types/web": "^0.0.150",
-    "@typescript-eslint/parser": "^7.14.1",
+    "@types/chai": "^4.3.17",
+    "@types/chrome": "^0.0.269",
+    "@types/node": "^22.2.0",
+    "@types/web": "^0.0.154",
+    "@typescript-eslint/parser": "^8.0.1",
     "chai": "^5.1.1",
     "chai-bites": "^0.2.0",
     "esformatter": "^0.11.3",
@@ -33,8 +33,8 @@
     "ts-toolbelt": "^9.6.0",
     "tsc-esm-fix": "^2.20.27",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.5.2",
-    "vite": "^5.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
     "vitest": "^1.6.0"
   }
 }
