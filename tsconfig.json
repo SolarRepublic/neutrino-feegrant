@@ -3,10 +3,11 @@
 
 	"compilerOptions": {
 		"baseUrl": ".",
-		"outDir": "dist/nil",
+		"outDir": "dist",
+		"module": "ESNext",
 
 		"declaration": true,
-		"declarationDir": "dist/nil",
+		"declarationDir": "dist",
 		"noImplicitReturns": false,
 		"moduleResolution": "Bundler",
 	},
@@ -14,13 +15,5 @@
 	"include": [
 		"src/**/*.d.ts",
 		"src/**/*.ts",
-		"test/**/*.ts",
-		"vite.config.ts",
-		"rollup.config.ts"
 	],
-
-	"ts-node": {
-		"require": ["tsconfig-paths/register"],
-		"experimentalSpecifierResolution": "node"
-	},
 }

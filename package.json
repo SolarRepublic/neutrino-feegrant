@@ -1,11 +1,12 @@
 {
   "name": "neutrino-feegrant",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "bun --env-file=.env run src/server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc && tsc-esm-fix --target=dist",
+    "start": "node --env-file=.env dist/server.js"
   },
   "keywords": [],
   "author": "",
@@ -36,5 +37,6 @@
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
     "vitest": "^1.6.0"
-  }
+  },
+  "packageManager": "pnpm@9.0.6+sha1.648f6014eb363abb36618f2ba59282a9eeb3e879"
 }
