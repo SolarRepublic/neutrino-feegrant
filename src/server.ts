@@ -58,7 +58,7 @@ const k_wallet = await Wallet(
 );
 
 // open a persistent WebSocket to Secret RPC
-const K_TEF_SECRET = await TendermintEventFilter(P_RPC_SECRET, __UNDEFINED, 1);
+const K_TEF_SECRET = await TendermintEventFilter(P_RPC_SECRET);
 
 // create HTTP server
 const y_fastify = fastify({
