@@ -72,8 +72,20 @@ const a_enqueued: [
 	fke_granted: ReturnType<typeof defer>[1],
 ][] = [];
 
+// flag controls whether it should wait for account sequence to catch up
+let b_clearing = false;
+
 // monitor when new block occurs
 await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
+	// clearing
+	if(b_clearing) {
+		// turn off for next block
+		b_clearing = false;
+
+		// exit
+		return;
+	}
+
 	// process queued messages
 	if(a_enqueued.length) {
 		// copy enqueued list
@@ -115,6 +127,9 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 			// resolve Promise with transaction result
 			fke_granted(a_results);
 		}
+
+		// wait for next block to clear account sequence
+		b_clearing = true;
 	}
 }, 1);
 
