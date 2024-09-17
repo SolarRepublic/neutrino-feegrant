@@ -1,14 +1,14 @@
 import type {WeakSecretAccAddr} from '@solar-republic/neutrino';
 
-import {__UNDEFINED, assign, die, entries, hex_to_bytes, parse_json_safe, stringify_json, type Dict} from '@blake.regalia/belt';
+import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, stringify_json, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE, encodeCosmosFeegrantMsgGrantAllowance, encodeCosmosFeegrantMsgRevokeAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/tx';
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
 
 import {bech32_decode} from '@solar-republic/crypto';
-import {TendermintEventFilter, Wallet, broadcast_result, create_and_sign_tx_direct, exec_fees} from '@solar-republic/neutrino';
+import {TendermintEventFilter, TendermintWs, Wallet, broadcast_result, create_and_sign_tx_direct, exec_fees} from '@solar-republic/neutrino';
 import fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
-import { queryCosmosFeegrantAllowance } from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/query';
+import {queryCosmosFeegrantAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/query';
 import assert from 'assert';
 
 // check server secret key
@@ -65,15 +65,76 @@ const y_fastify = fastify({
 	logger: true,
 });
 
-async function exec_msgs(
+// enqueued messaged
+const a_enqueued: [
+	atu8_msg: Uint8Array,
+	xg_limit: bigint,
+	fke_granted: ReturnType<typeof defer>[1],
+][] = [];
+
+// monitor when new block occurs
+await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
+	// process queued messages
+	if(a_enqueued.length) {
+		// copy enqueued list
+		const a_dequeued = a_enqueued.slice();
+
+		// reset length
+		a_enqueued.length = 0;
+
+		// prep results
+		let a_results: Awaited<ReturnType<typeof broadcast_result>>;
+
+		// try processing
+		try {
+			// concat all messages
+			const a_msgs = a_dequeued.map(([atu8]) => atu8);
+
+			// compute sum of limits
+			const xg_limit = a_dequeued.reduce((xg_sum, [, xg]) => xg_sum + xg, 0n);
+
+			// create and sign tx
+			const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, a_msgs, exec_fees(xg_limit, X_GAS_PRICE), `${xg_limit}`, 0, S_MEMO);
+
+			// broadcast
+			a_results = await broadcast_result(k_wallet, atu8_raw, si_txn, K_TEF_SECRET);
+		}
+		// caught error
+		catch(e_process) {
+			// forward error to each callback
+			for(const [,, fke_granted] of a_dequeued) {
+				fke_granted(__UNDEFINED, e_process as Error);
+			}
+
+			// exit
+			return;
+		}
+
+		// each dequeued message
+		for(const [,, fke_granted] of a_dequeued) {
+			// resolve Promise with transaction result
+			fke_granted(a_results);
+		}
+	}
+}, 1);
+
+// enqueue a message to be signed and broadcasted in next transaction
+export async function enqueue(
 	atu8_msg: Uint8Array,
 	xg_limit: bigint,
 ) {
-	// create and sign tx
-	const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, [atu8_msg], exec_fees(xg_limit, X_GAS_PRICE), `${xg_limit}`, 0, S_MEMO);
+	// create deferred Promise
+	const [dp_granted, fke_granted] = defer();
 
-	// broadcast
-	return await broadcast_result(k_wallet, atu8_raw, si_txn);
+	// enqueue
+	a_enqueued.push([
+		atu8_msg,
+		xg_limit,
+		fke_granted,
+	]);
+
+	// return Promise
+	return dp_granted;
 }
 
 // for CORS requests
@@ -185,7 +246,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 		);
 
 		// execute revocation
-		const [xc_code, sx_res, g_meta, atu8_result, h_events] = await exec_msgs(atu8_msg, XG_LIMIT_REVOKE);
+		const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_REVOKE);
 
 		// error revoking
 		if(xc_code) {
@@ -207,11 +268,8 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 		)
 	);
 
-	// create and sign tx
-	const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, [atu8_msg], exec_fees(XG_LIMIT_GRANT, X_GAS_PRICE), `${XG_LIMIT_GRANT}`, 0, S_MEMO);
-
 	// broadcast
-	const [xc_code, sx_res, g_meta, atu8_result, h_events] = await broadcast_result(k_wallet, atu8_raw, si_txn, K_TEF_SECRET);
+	const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_GRANT);
 
 	// failed
 	if(xc_code) {
