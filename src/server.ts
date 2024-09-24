@@ -307,4 +307,7 @@ y_fastify.listen({
 	if(!e_report) {
 		console.log(`Feegrant wallet address: ${k_wallet.addr}`);
 	}
+	else {
+		console.error(e_report);
+	}
 });
