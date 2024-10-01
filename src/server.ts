@@ -1,4 +1,4 @@
-import type {WeakSecretAccAddr} from '@solar-republic/neutrino';
+import type {SlimAuthInfo, TxResultTuple, WeakSecretAccAddr} from '@solar-republic/neutrino';
 
 import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, stringify_json, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
@@ -6,10 +6,11 @@ import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COS
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
 
 import {bech32_decode} from '@solar-republic/crypto';
-import {TendermintEventFilter, TendermintWs, Wallet, broadcast_result, create_and_sign_tx_direct, exec_fees} from '@solar-republic/neutrino';
+import {TendermintEventFilter, TendermintWs, Wallet, auth, broadcast_result, create_and_sign_tx_direct, exec_fees} from '@solar-republic/neutrino';
 import fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import {queryCosmosFeegrantAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/query';
 import assert from 'assert';
+import type { WeakUintStr } from '@solar-republic/types';
 
 // check server secret key
 const SB16_SERVER_SK = (process.env.SERVER_SK || '').replace(/^0x/, '');
@@ -73,14 +74,14 @@ const a_enqueued: [
 ][] = [];
 
 // flag controls whether it should wait for account sequence to catch up
-let b_clearing = false;
+let c_clearing = 0;
 
 // monitor when new block occurs
 await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 	// clearing
-	if(b_clearing) {
-		// turn off for next block
-		b_clearing = false;
+	if(c_clearing > 0) {
+		// decrement counter until zero
+		c_clearing -= 1;
 
 		// exit
 		return;
@@ -97,29 +98,72 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 		// prep results
 		let a_results: Awaited<ReturnType<typeof broadcast_result>>;
 
-		// try processing
-		try {
-			// concat all messages
-			const a_msgs = a_dequeued.map(([atu8]) => atu8);
+		// auth (default to automatic)
+		let z_auth: SlimAuthInfo | 0 = 0;
 
-			// compute sum of limits
-			const xg_limit = a_dequeued.reduce((xg_sum, [, xg]) => xg_sum + xg, 0n);
+		// retry-able transaction
+		RETRY_TRANSACTION:
+		for(let i_retry=0; ; i_retry++) {
+			// try processing
+			try {
+				// concat all messages
+				const a_msgs = a_dequeued.map(([atu8]) => atu8);
 
-			// create and sign tx
-			const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, a_msgs, exec_fees(xg_limit, X_GAS_PRICE), `${xg_limit}`, 0, S_MEMO);
+				// compute sum of limits
+				const xg_limit = a_dequeued.reduce((xg_sum, [, xg]) => xg_sum + xg, 0n);
 
-			// broadcast
-			a_results = await broadcast_result(k_wallet, atu8_raw, si_txn, K_TEF_SECRET);
-		}
-		// caught error
-		catch(e_process) {
-			// forward error to each callback
-			for(const [,, fke_granted] of a_dequeued) {
-				fke_granted(__UNDEFINED, e_process as Error);
+				// create and sign tx
+				const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, a_msgs, exec_fees(xg_limit, X_GAS_PRICE), `${xg_limit}`, z_auth, S_MEMO);
+
+				// broadcast
+				a_results = await broadcast_result(k_wallet, atu8_raw, si_txn, K_TEF_SECRET);
+
+				// destructure
+				const [xc_code, sx_res, g_meta] = a_results;
+
+				// error
+				if(xc_code) {
+					// depending on which codespace
+					switch(g_meta?.codespace) {
+						// SDK codespace
+						case 'sdk': {
+							// account sequence
+							if(32 === g_meta.code) {
+								// not yet exceeded retry attempts
+								if(i_retry < 2) {
+									// parse message
+									const m_expected = /expected (\d+)/.exec(g_meta.log || '');
+									if(m_expected) {
+										// fetch auth
+										const a_auth = await auth(k_wallet);
+
+										// set auth
+										z_auth = [a_auth[0], m_expected[1] as WeakUintStr];
+
+										// retry
+										continue RETRY_TRANSACTION;
+									}
+								}
+							}
+
+							break;
+						}
+					}
+				}
+			}
+			// caught error
+			catch(e_process) {
+				// forward error to each callback
+				for(const [,, fke_granted] of a_dequeued) {
+					fke_granted(__UNDEFINED, e_process as Error);
+				}
+
+				// exit
+				return;
 			}
 
-			// exit
-			return;
+			// done
+			break;
 		}
 
 		// each dequeued message
@@ -129,7 +173,7 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 		}
 
 		// wait for next block to clear account sequence
-		b_clearing = true;
+		c_clearing = 2;
 	}
 }, 1);
 
@@ -137,7 +181,7 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 export async function enqueue(
 	atu8_msg: Uint8Array,
 	xg_limit: bigint,
-) {
+): Promise<TxResultTuple> {
 	// create deferred Promise
 	const [dp_granted, fke_granted] = defer();
 
