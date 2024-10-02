@@ -1,4 +1,5 @@
 import type {SlimAuthInfo, TxResultTuple, WeakSecretAccAddr} from '@solar-republic/neutrino';
+import type {WeakUintStr} from '@solar-republic/types';
 
 import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, stringify_json, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
@@ -10,7 +11,14 @@ import {TendermintEventFilter, TendermintWs, Wallet, auth, broadcast_result, cre
 import fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import {queryCosmosFeegrantAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/query';
 import assert from 'assert';
-import type { WeakUintStr } from '@solar-republic/types';
+
+type BlockIdFrag = {
+	hash: string;
+	parts: {
+		total: number;
+		hash: string;
+	};
+}
 
 // check server secret key
 const SB16_SERVER_SK = (process.env.SERVER_SK || '').replace(/^0x/, '');
@@ -79,7 +87,56 @@ let c_clearing = 0;
 // monitor when new block occurs
 await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 	// parse message
-	const g_data = parse_json_safe(d_event.data);
+	const g_data = parse_json_safe<{
+		result?: {
+			data?: {
+				value?: {
+					block: {
+						header: {
+							version: {
+								block: `${bigint}`;
+							};
+							chain_id: string;
+							height: `${bigint}`;
+							time: string;
+							last_block_id: BlockIdFrag;
+							last_commit_hash: string;
+							data_hash: string;
+							validators_hash: string;
+							next_validators_hash: string;
+							consensus_hash: string;
+							app_hash: string;
+							last_results_hash: string;
+							evidence_hash: string;
+							proposer_address: string;
+						};
+			
+						data: {
+							txs: [];
+						};
+			
+						evidence: {
+							evidence: [];
+						};
+			
+						last_commit: {
+							height: `${bigint}`;
+							round: number;
+							block_id: BlockIdFrag;
+							signatures: {
+								block_id_flag: number;
+								validator_address: string;
+								timestamp: string;
+								signature: string;
+							}[];
+						};
+					};
+					result_begin_block: {};
+					result_end_block: {};
+				};
+			};
+		};
+	}>(d_event.data);
 
 	// get block height
 	const {
