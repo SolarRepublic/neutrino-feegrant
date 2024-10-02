@@ -1,5 +1,5 @@
 import type {SlimAuthInfo, TxResultTuple, WeakSecretAccAddr} from '@solar-republic/neutrino';
-import type {WeakUintStr} from '@solar-republic/types';
+import type {WeakAccountAddr, WeakUintStr} from '@solar-republic/types';
 
 import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, stringify_json, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
@@ -11,6 +11,7 @@ import {TendermintEventFilter, TendermintWs, Wallet, auth, broadcast_result, cre
 import fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import {queryCosmosFeegrantAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/query';
 import assert from 'assert';
+import { safe_bytes_to_base64 } from '@solar-republic/cosmos-grpc';
 
 type BlockIdFrag = {
 	hash: string;
@@ -74,12 +75,16 @@ const y_fastify = fastify({
 	logger: true,
 });
 
-// enqueued messaged
-const a_enqueued: [
+// enqueued message tuple
+type Enqueued = [
 	atu8_msg: Uint8Array,
 	xg_limit: bigint,
 	fke_granted: ReturnType<typeof defer>[1],
-][] = [];
+	sa_grantee: WeakAccountAddr,
+];
+
+// enqueued messaged
+const a_enqueued: Enqueued[] = [];
 
 // flag controls whether it should wait for account sequence to catch up
 let c_clearing = 0;
@@ -179,10 +184,40 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 			// verbose
 			console.log(`Attempt #${i_retry+1}...`);
 
+			// postponed
+			const a_postponed: Enqueued[] = [];
+
 			// try processing
 			try {
+				// should be unique per grantee
+				const as_grantees = new Set<string>();
+
+				// remove duplicates
+				const as_msgs = new Set<string>();
+
 				// concat all messages
-				const a_msgs = a_dequeued.map(([atu8]) => atu8);
+				const a_msgs = a_dequeued.reduce((a_out, a_queued) => {
+					// destructure
+					const [atu8_msg,,, sa_grantee] = a_queued;
+
+					// encode message
+					const sb64_msg = safe_bytes_to_base64(atu8_msg);
+
+					// not already in set
+					if(!as_msgs.has(sb64_msg || '')) {
+						// grantee already subject; postpone queued instruction
+						if(as_grantees.has(sa_grantee)) {
+							a_postponed.push(a_queued);
+						}
+						// good to go; add it
+						else {
+							a_out.push(atu8_msg);
+						}
+					}
+
+					// accumulate
+					return a_out;
+				}, [] as Uint8Array[]);
 
 				// compute sum of limits
 				const xg_limit = a_dequeued.reduce((xg_sum, [, xg]) => xg_sum + xg, 0n);
@@ -234,6 +269,9 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 						}
 					}
 				}
+
+				// un-postpone
+				a_enqueued.push(...a_postponed);
 			}
 			// caught error
 			catch(e_process) {
@@ -260,7 +298,7 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 		}
 
 		// wait for next block to clear account sequence
-		c_clearing = 2;
+		c_clearing = 1;
 	}
 }, 1);
 
@@ -268,6 +306,7 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 export async function enqueue(
 	atu8_msg: Uint8Array,
 	xg_limit: bigint,
+	sa_grantee: WeakAccountAddr,
 ): Promise<TxResultTuple> {
 	// create deferred Promise
 	const [dp_granted, fke_granted] = defer();
@@ -277,6 +316,7 @@ export async function enqueue(
 		atu8_msg,
 		xg_limit,
 		fke_granted,
+		sa_grantee,
 	]);
 
 	// return Promise
@@ -392,7 +432,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 		);
 
 		// execute revocation
-		const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_REVOKE);
+		const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_REVOKE, sa_grantee);
 
 		// error revoking
 		if(xc_code) {
@@ -415,7 +455,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 	);
 
 	// broadcast
-	const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_GRANT);
+	const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_GRANT, sa_grantee);
 
 	// failed
 	if(xc_code) {
