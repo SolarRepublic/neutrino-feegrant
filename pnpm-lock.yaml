@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@blake.regalia/belt':
-        specifier: ^0.38.1
-        version: 0.38.1
+        specifier: ^0.38.3
+        version: 0.38.3
       '@solar-republic/cosmos-grpc':
         specifier: ^0.17.1
         version: 0.17.1
@@ -18,8 +18,8 @@ importers:
         specifier: ^0.2.14
         version: 0.2.14
       '@solar-republic/neutrino':
-        specifier: ^1.5.3
-        version: 1.5.3
+        specifier: ^1.5.4
+        version: 1.5.4
       fastify:
         specifier: ^4.28.1
         version: 4.28.1
@@ -31,17 +31,17 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       '@types/chai':
-        specifier: ^4.3.17
-        version: 4.3.17
+        specifier: ^5.0.0
+        version: 5.0.0
       '@types/chrome':
-        specifier: ^0.0.269
-        version: 0.0.269
+        specifier: ^0.0.274
+        version: 0.0.274
       '@types/node':
-        specifier: ^22.2.0
-        version: 22.2.0
+        specifier: ^22.7.4
+        version: 22.7.4
       '@types/web':
-        specifier: ^0.0.154
-        version: 0.0.154
+        specifier: ^0.0.167
+        version: 0.0.167
       '@typescript-eslint/parser':
         specifier: ^8.0.1
         version: 8.1.0(eslint@8.57.0)(typescript@5.5.4)
@@ -59,7 +59,7 @@ importers:
         version: 8.57.0
       ts-node:
         specifier: ^10.9.2
-        version: 10.9.2(@types/node@22.2.0)(typescript@5.5.4)
+        version: 10.9.2(@types/node@22.7.4)(typescript@5.5.4)
       ts-toolbelt:
         specifier: ^9.6.0
         version: 9.6.0
@@ -74,18 +74,18 @@ importers:
         version: 5.5.4
       vite:
         specifier: ^5.4.0
-        version: 5.4.0(@types/node@22.2.0)
+        version: 5.4.0(@types/node@22.7.4)
       vitest:
         specifier: ^1.6.0
-        version: 1.6.0(@types/node@22.2.0)
+        version: 1.6.0(@types/node@22.7.4)
 
 packages:
 
   '@blake.regalia/belt@0.37.0':
     resolution: {integrity: sha512-kpAXIn9ioUBVRjwvtyyjZRzwQ2MRJbI/AKY+4maQZD+daG/9tbCN0ET8BP9WzfqD0jZ8i5TIjEByjUdWpzn1MQ==}
 
-  '@blake.regalia/belt@0.38.1':
-    resolution: {integrity: sha512-SW9USz5aCKv45jNccOon2I2YtTFQKEjxlcmgZJdwPt1vtcnRpvsf7Cb8D5JPkEZm6fwBAbx/8+qfmzj0d/2qMQ==}
+  '@blake.regalia/belt@0.38.3':
+    resolution: {integrity: sha512-Zdk577TQhoB6Gv2O+5WOY7/rClAcwgXHMFPEC6tqOVE0orX8QPsGHd6FMwP3rcWd4JuTFv1TbaQTreUanbauyw==}
 
   '@blake.regalia/tsconfig@0.2.0':
     resolution: {integrity: sha512-WfdBP8PHsvac240/C2lAtrMbr+qxn9zqyxprQBFearw24sfhz72HLXU5l+jVv5dgnUPo43PhyobFpGInQc8SOg==}
@@ -423,8 +423,8 @@ packages:
   '@solar-republic/crypto@0.2.14':
     resolution: {integrity: sha512-lm9U5QuBamqYAsdrJsnVfE7Uef4TyCvgLsgypPI1/RNjFdRCeKpMXoCRmJxeu3m/FzOhmPvX3WDd+ePCGw149w==}
 
-  '@solar-republic/neutrino@1.5.3':
-    resolution: {integrity: sha512-2zsapCKZtfFHOuwugJA/9ykYgOHDA7W0Me96lVNrKoUuWfNKhnKoFTfH5iUDoJ+3rlzT7qoCoN64WzsgFK5i1g==}
+  '@solar-republic/neutrino@1.5.4':
+    resolution: {integrity: sha512-+19aFHjFH2C2msETjlpdFPj9OuSU5CL+8Q+OdP6abHYUS/y4rJ7Wgi1VWf3uknLaD6LDQLtFvOj7KgAMRs+HVg==}
 
   '@solar-republic/types@0.2.12':
     resolution: {integrity: sha512-EnJa8d5yv73YMkm1lBlFxDrZyJTBD0zz2rh6cHJINpfVjsH/34t5P824CBJ3Nj+xicfuFXWDlxVHCNbkS52h9A==}
@@ -444,11 +444,11 @@ packages:
   '@tsconfig/node16@1.0.4':
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
 
-  '@types/chai@4.3.17':
-    resolution: {integrity: sha512-zmZ21EWzR71B4Sscphjief5djsLre50M6lI622OSySTmn9DB3j+C3kWroHfBQWXbOBwbgg/M8CG/hUxDLIloow==}
+  '@types/chai@5.0.0':
+    resolution: {integrity: sha512-+DwhEHAaFPPdJ2ral3kNHFQXnTfscEEFsUxzD+d7nlcLrFK23JtNjH71RGasTcHb88b4vVi4mTyfpf8u2L8bdA==}
 
-  '@types/chrome@0.0.269':
-    resolution: {integrity: sha512-vF7x8YywnhXX2F06njQ/OE7a3Qeful43C5GUOsUksXWk89WoSFUU3iLeZW8lDpVO9atm8iZIEiLQTRC3H7NOXQ==}
+  '@types/chrome@0.0.274':
+    resolution: {integrity: sha512-NtFr8NTITmVXb+uxb9RUy+JR7ifWd2L0hgYiP2GdrWxUXqyKEJBxICc75Y6/+jhXJcgIrdYOlMO2qhtiH6pVrg==}
 
   '@types/estree@1.0.5':
     resolution: {integrity: sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw==}
@@ -462,11 +462,11 @@ packages:
   '@types/har-format@1.2.15':
     resolution: {integrity: sha512-RpQH4rXLuvTXKR0zqHq3go0RVXYv/YVqv4TnPH95VbwUxZdQlK1EtcMvQvMpDngHbt13Csh9Z4qT9AbkiQH5BA==}
 
-  '@types/node@22.2.0':
-    resolution: {integrity: sha512-bm6EG6/pCpkxDf/0gDNDdtDILMOHgaQBVOJGdwsqClnxA3xL6jtMv76rLBc006RVMWbmaf0xbmom4Z/5o2nRkQ==}
+  '@types/node@22.7.4':
+    resolution: {integrity: sha512-y+NPi1rFzDs1NdQHHToqeiX2TIS79SWEAw9GYhkkx8bD0ChpfqC+n2j5OXOCpzfojBEBt6DnEnnG9MY0zk1XLg==}
 
-  '@types/web@0.0.154':
-    resolution: {integrity: sha512-Tc10Nkpbb8AgM3iGnrvpKVb6x8pzrZpMCPqMJe8htXoEdNDKojEevNAkCjxkjCLZF2p1ZB+gknAwdbkypxwxKg==}
+  '@types/web@0.0.167':
+    resolution: {integrity: sha512-IhdCUXL+vwofU/IzuOD+/T8Xteuk8fS9TvVJi7y7HTuURs7pWf3Kysxz4+lU0NSkj2LjDQ8AbKaaFFoAgeqYPg==}
 
   '@typescript-eslint/parser@8.1.0':
     resolution: {integrity: sha512-U7iTAtGgJk6DPX9wIWPPOlt1gO57097G06gIcl0N0EEnNw8RGD62c+2/DiP/zL7KrkqnnqF7gtFGR7YgzPllTA==}
@@ -1591,8 +1591,8 @@ packages:
   ufo@1.5.3:
     resolution: {integrity: sha512-Y7HYmWaFwPUmkoQCUIAYpKqkOf+SbVj/2fJJZ4RJMCfZp0rTGwRbzQD+HghfnhKOjL9E01okqz+ncJskGYfBNw==}
 
-  undici-types@6.13.0:
-    resolution: {integrity: sha512-xtFJHudx8S2DSoujjMd1WeWvn7KKWFRESZTMeL1RptAYERu29D6jphMjjY+vn96jvN3kVPDNxU/E13VTaXj6jg==}
+  undici-types@6.19.8:
+    resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
 
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
@@ -1709,7 +1709,7 @@ snapshots:
 
   '@blake.regalia/belt@0.37.0': {}
 
-  '@blake.regalia/belt@0.38.1': {}
+  '@blake.regalia/belt@0.38.3': {}
 
   '@blake.regalia/tsconfig@0.2.0(typescript@5.5.4)':
     dependencies:
@@ -1949,7 +1949,7 @@ snapshots:
       '@solar-republic/wasm-secp256k1': 0.2.8
       hash-wasm: 4.11.0
 
-  '@solar-republic/neutrino@1.5.3':
+  '@solar-republic/neutrino@1.5.4':
     dependencies:
       '@blake.regalia/belt': 0.37.0
       '@solar-republic/cosmos-grpc': 0.17.1
@@ -1969,9 +1969,9 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
-  '@types/chai@4.3.17': {}
+  '@types/chai@5.0.0': {}
 
-  '@types/chrome@0.0.269':
+  '@types/chrome@0.0.274':
     dependencies:
       '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.15
@@ -1986,11 +1986,11 @@ snapshots:
 
   '@types/har-format@1.2.15': {}
 
-  '@types/node@22.2.0':
+  '@types/node@22.7.4':
     dependencies:
-      undici-types: 6.13.0
+      undici-types: 6.19.8
 
-  '@types/web@0.0.154': {}
+  '@types/web@0.0.167': {}
 
   '@typescript-eslint/parser@8.1.0(eslint@8.57.0)(typescript@5.5.4)':
     dependencies:
@@ -2929,7 +2929,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
-      '@types/node': 22.2.0
+      '@types/node': 22.7.4
       long: 5.2.3
 
   protochain@1.0.5: {}
@@ -3143,14 +3143,14 @@ snapshots:
     dependencies:
       typescript: 5.5.4
 
-  ts-node@10.9.2(@types/node@22.2.0)(typescript@5.5.4):
+  ts-node@10.9.2(@types/node@22.7.4)(typescript@5.5.4):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       '@tsconfig/node10': 1.0.11
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.4
-      '@types/node': 22.2.0
+      '@types/node': 22.7.4
       acorn: 8.11.3
       acorn-walk: 8.3.2
       arg: 4.1.3
@@ -3192,7 +3192,7 @@ snapshots:
 
   ufo@1.5.3: {}
 
-  undici-types@6.13.0: {}
+  undici-types@6.19.8: {}
 
   universalify@2.0.1: {}
 
@@ -3206,13 +3206,13 @@ snapshots:
 
   v8-compile-cache-lib@3.0.1: {}
 
-  vite-node@1.6.0(@types/node@22.2.0):
+  vite-node@1.6.0(@types/node@22.7.4):
     dependencies:
       cac: 6.7.14
       debug: 4.3.4(supports-color@7.2.0)
       pathe: 1.1.2
       picocolors: 1.0.0
-      vite: 5.4.0(@types/node@22.2.0)
+      vite: 5.4.0(@types/node@22.7.4)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -3224,16 +3224,16 @@ snapshots:
       - supports-color
       - terser
 
-  vite@5.4.0(@types/node@22.2.0):
+  vite@5.4.0(@types/node@22.7.4):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.4.41
       rollup: 4.17.2
     optionalDependencies:
-      '@types/node': 22.2.0
+      '@types/node': 22.7.4
       fsevents: 2.3.3
 
-  vitest@1.6.0(@types/node@22.2.0):
+  vitest@1.6.0(@types/node@22.7.4):
     dependencies:
       '@vitest/expect': 1.6.0
       '@vitest/runner': 1.6.0
@@ -3252,11 +3252,11 @@ snapshots:
       strip-literal: 2.1.0
       tinybench: 2.8.0
       tinypool: 0.8.4
-      vite: 5.4.0(@types/node@22.2.0)
-      vite-node: 1.6.0(@types/node@22.2.0)
+      vite: 5.4.0(@types/node@22.7.4)
+      vite-node: 1.6.0(@types/node@22.7.4)
       why-is-node-running: 2.2.2
     optionalDependencies:
-      '@types/node': 22.2.0
+      '@types/node': 22.7.4
     transitivePeerDependencies:
       - less
       - lightningcss

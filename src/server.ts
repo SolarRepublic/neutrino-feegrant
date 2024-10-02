@@ -78,14 +78,29 @@ let c_clearing = 0;
 
 // monitor when new block occurs
 await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
+	// parse message
+	const g_data = parse_json_safe(d_event.data);
+
+	// get block height
+	const {
+		height: sg_height,
+		time: sx_time,
+	} = g_data?.result?.data?.value?.block?.header || {};
+
 	// clearing
 	if(c_clearing > 0) {
+		// verbose
+		console.log(`Block #${sg_height}; clearing ${c_clearing}`);
+
 		// decrement counter until zero
 		c_clearing -= 1;
 
 		// exit
 		return;
 	}
+
+	// verbose
+	console.log(`Block #${sg_height}; ${a_enqueued.length} enqueued`);
 
 	// process queued messages
 	if(a_enqueued.length) {
@@ -104,6 +119,9 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 		// retry-able transaction
 		RETRY_TRANSACTION:
 		for(let i_retry=0; ; i_retry++) {
+			// verbose
+			console.log(`Attempt #${i_retry+1}...`);
+
 			// try processing
 			try {
 				// concat all messages
@@ -121,6 +139,9 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 				// destructure
 				const [xc_code, sx_res, g_meta] = a_results;
 
+				// verbose
+				console.log(`${xc_code}: ${sx_res}`);
+
 				// error
 				if(xc_code) {
 					// depending on which codespace
@@ -131,6 +152,9 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 							if(32 === g_meta.code) {
 								// not yet exceeded retry attempts
 								if(i_retry < 2) {
+									// verbose
+									console.warn(`Retrying failed broadcast on mismatched sequence error`);
+
 									// parse message
 									const m_expected = /expected (\d+)/.exec(g_meta.log || '');
 									if(m_expected) {
@@ -139,6 +163,9 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 
 										// set auth
 										z_auth = [a_auth[0], m_expected[1] as WeakUintStr];
+
+										// verbose
+										console.warn(`Auth info: ${z_auth[0]}, ${z_auth[1]}`);
 
 										// retry
 										continue RETRY_TRANSACTION;
@@ -153,6 +180,9 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 			}
 			// caught error
 			catch(e_process) {
+				// verbose
+				console.warn(`Forwarding failure to callbacks: ${(e_process as Error)?.message || e_process}`);
+
 				// forward error to each callback
 				for(const [,, fke_granted] of a_dequeued) {
 					fke_granted(__UNDEFINED, e_process as Error);
