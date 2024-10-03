@@ -1,7 +1,7 @@
 import type {SlimAuthInfo, TxResultTuple, WeakSecretAccAddr} from '@solar-republic/neutrino';
 import type {WeakAccountAddr, WeakUintStr} from '@solar-republic/types';
 
-import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, stringify_json, timeout_exec, try_sync, type Dict} from '@blake.regalia/belt';
+import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, remove, stringify_json, timeout_exec, try_sync, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE, encodeCosmosFeegrantMsgGrantAllowance, encodeCosmosFeegrantMsgRevokeAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/tx';
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
@@ -86,7 +86,7 @@ function check_queue_regularly() {
 
 	// assume block occurs every 6 seconds
 	i_regularly_check = setInterval(() => {
-		check_queue();
+		void check_queue();
 	}, 6e3);
 }
 
@@ -104,13 +104,13 @@ const a_enqueued: Enqueued[] = [];
 // flag controls whether it should wait for account sequence to catch up
 let c_clearing = 0;
 
+// termination timeout
+let i_terminate: NodeJS.Timeout | number = 0;
+
 // subscribe to new blocks and use that as the basis for broadcasts
 async function subscribe_new_blocks() {
 	// stop regular checks
 	clearInterval(i_regularly_check);
-
-	// termination timeout
-	let i_terminate: NodeJS.Timeout | number = 0;
 
 	// monitor when new block occurs
 	const [k_ws, b_timed_out] = await timeout_exec(30e3, () => TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
@@ -195,6 +195,9 @@ async function subscribe_new_blocks() {
 		// cancel the termination timeout for now
 		clearTimeout(i_terminate);
 
+		// indicate this is disabled
+		i_terminate = 0;
+
 		// a close event was emitted
 		if(d_close) console.warn(`Reason: ${d_close.reason}`);
 
@@ -207,7 +210,13 @@ async function subscribe_new_blocks() {
 
 	// failed to subscribe in the allotted time
 	if(b_timed_out) {
+		// switch to manual mode
 		check_queue_regularly();
+
+		// try again in a minute
+		setTimeout(() => {
+			subscribe_new_blocks();
+		}, 60e3);
 	}
 }
 
@@ -268,16 +277,27 @@ async function check_queue(sg_height='X') {
 					const [atu8_msg,,, sa_grantee] = a_queued;
 
 					// encode message
-					const sb64_msg = safe_bytes_to_base64(atu8_msg);
+					const sb64_msg = safe_bytes_to_base64(atu8_msg) || '';
 
 					// not already in set
-					if(!as_msgs.has(sb64_msg || '')) {
-						// grantee already subject; postpone queued instruction
+					if(!as_msgs.has(sb64_msg)) {
+						// add to set
+						as_msgs.add(sb64_msg);
+
+						// grantee already subject
 						if(as_grantees.has(sa_grantee)) {
+							// remove from dequeued
+							remove(a_dequeued, a_queued);
+
+							// postpone queued instruction
 							a_postponed.push(a_queued);
 						}
-						// good to go; add it
+						// good to go
 						else {
+							// add to set
+							as_grantees.add(sa_grantee);
+
+							// accept message
 							a_out.push(atu8_msg);
 						}
 					}
@@ -433,7 +453,7 @@ y_fastify.post<{
 
 async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: WeakSecretAccAddr) {
 	// log request
-	console.log(`${d_req.method} ${d_req.url} ${entries(d_req.query as Dict)}`);
+	console.log(`${d_req.method} ${d_req.url} ${entries(d_req.query as Dict)} ${d_req.body}`);
 
 	// set response headers
 	d_res.headers({
