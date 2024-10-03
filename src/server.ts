@@ -1,7 +1,7 @@
 import type {SlimAuthInfo, TxResultTuple, WeakSecretAccAddr} from '@solar-republic/neutrino';
 import type {WeakAccountAddr, WeakUintStr} from '@solar-republic/types';
 
-import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, remove, stringify_json, timeout_exec, try_sync, type Dict} from '@blake.regalia/belt';
+import {__UNDEFINED, assign, concat_entries, defer, die, entries, hex_to_bytes, parse_json_safe, remove, stringify_json, timeout_exec, try_sync, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE, encodeCosmosFeegrantMsgGrantAllowance, encodeCosmosFeegrantMsgRevokeAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/tx';
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
@@ -286,6 +286,9 @@ async function check_queue(sg_height='X') {
 
 						// grantee already subject
 						if(as_grantees.has(sa_grantee)) {
+							// verbose
+							console.warn(`Different message exists for same grantee ${sa_grantee}`);
+
 							// remove from dequeued
 							remove(a_dequeued, a_queued);
 
@@ -300,6 +303,11 @@ async function check_queue(sg_height='X') {
 							// accept message
 							a_out.push(atu8_msg);
 						}
+					}
+					// duplicate
+					else {
+						// verbose
+						console.warn(`Duplicate message found for grantee ${sa_grantee}`);
 					}
 
 					// accumulate
@@ -318,11 +326,11 @@ async function check_queue(sg_height='X') {
 				// destructure
 				const [xc_code, sx_res, g_meta] = a_results;
 
-				// verbose
-				console.log(`${xc_code}: ${sx_res}`);
-
 				// error
 				if(xc_code) {
+					// verbose
+					console.error(`code:${xc_code}; res:${sx_res}; meta:${stringify_json(g_meta)}`);
+
 					// depending on which codespace
 					switch(g_meta?.codespace) {
 						// SDK codespace
@@ -355,6 +363,10 @@ async function check_queue(sg_height='X') {
 							break;
 						}
 					}
+				}
+				// success
+				else {
+					console.log(`✅ ${si_txn}: [${a_dequeued.map(([,,, sa_grantee]) => sa_grantee).join(', ')}]`);
 				}
 
 				// un-postpone
@@ -453,7 +465,7 @@ y_fastify.post<{
 
 async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: WeakSecretAccAddr) {
 	// log request
-	console.log(`${d_req.method} ${d_req.url} ${entries(d_req.query as Dict)} ${d_req.body}`);
+	console.log(`${d_req.method} ${d_req.url} ${stringify_json(d_req.query as Dict)} ${stringify_json(d_req.body as Dict)}`);
 
 	// set response headers
 	d_res.headers({
@@ -546,7 +558,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 
 	// failed
 	if(xc_code) {
-		console.error(`code:${xc_code}; res:${sx_res}; meta:${stringify_json(g_meta)}`);
+		console.error(`<== 550 to ${sa_grantee}`);
 		return d_res.code(550).send(parse_json_safe(sx_res) || sx_res);
 	}
 
