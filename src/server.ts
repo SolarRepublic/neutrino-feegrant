@@ -1,7 +1,7 @@
 import type {SlimAuthInfo, TxResultTuple, WeakSecretAccAddr} from '@solar-republic/neutrino';
 import type {WeakAccountAddr, WeakUintStr} from '@solar-republic/types';
 
-import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, stringify_json, type Dict} from '@blake.regalia/belt';
+import {__UNDEFINED, assign, defer, die, entries, hex_to_bytes, parse_json_safe, stringify_json, timeout_exec, try_sync, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE, encodeCosmosFeegrantMsgGrantAllowance, encodeCosmosFeegrantMsgRevokeAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/tx';
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
@@ -75,6 +75,21 @@ const y_fastify = fastify({
 	logger: true,
 });
 
+
+// check interval
+let i_regularly_check: NodeJS.Timeout | number = 0;
+
+// regularly check the queue at ideal block time
+function check_queue_regularly() {
+	// clear any previous intervals
+	clearInterval(i_regularly_check);
+
+	// assume block occurs every 6 seconds
+	i_regularly_check = setInterval(() => {
+		check_queue();
+	}, 6e3);
+}
+
 // enqueued message tuple
 type Enqueued = [
 	atu8_msg: Uint8Array,
@@ -89,66 +104,118 @@ const a_enqueued: Enqueued[] = [];
 // flag controls whether it should wait for account sequence to catch up
 let c_clearing = 0;
 
-// monitor when new block occurs
-await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
-	// parse message
-	const g_data = parse_json_safe<{
-		result?: {
-			data?: {
-				value?: {
-					block: {
-						header: {
-							version: {
-								block: `${bigint}`;
+// subscribe to new blocks and use that as the basis for broadcasts
+async function subscribe_new_blocks() {
+	// stop regular checks
+	clearInterval(i_regularly_check);
+
+	// termination timeout
+	let i_terminate: NodeJS.Timeout | number = 0;
+
+	// monitor when new block occurs
+	const [k_ws, b_timed_out] = await timeout_exec(30e3, () => TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
+		// cancel termination timeout
+		clearTimeout(i_terminate);
+
+		// parse message
+		const g_data = parse_json_safe<{
+			result?: {
+				data?: {
+					value?: {
+						block: {
+							header: {
+								version: {
+									block: `${bigint}`;
+								};
+								chain_id: string;
+								height: `${bigint}`;
+								time: string;
+								last_block_id: BlockIdFrag;
+								last_commit_hash: string;
+								data_hash: string;
+								validators_hash: string;
+								next_validators_hash: string;
+								consensus_hash: string;
+								app_hash: string;
+								last_results_hash: string;
+								evidence_hash: string;
+								proposer_address: string;
 							};
-							chain_id: string;
-							height: `${bigint}`;
-							time: string;
-							last_block_id: BlockIdFrag;
-							last_commit_hash: string;
-							data_hash: string;
-							validators_hash: string;
-							next_validators_hash: string;
-							consensus_hash: string;
-							app_hash: string;
-							last_results_hash: string;
-							evidence_hash: string;
-							proposer_address: string;
+				
+							data: {
+								txs: [];
+							};
+				
+							evidence: {
+								evidence: [];
+							};
+				
+							last_commit: {
+								height: `${bigint}`;
+								round: number;
+								block_id: BlockIdFrag;
+								signatures: {
+									block_id_flag: number;
+									validator_address: string;
+									timestamp: string;
+									signature: string;
+								}[];
+							};
 						};
-			
-						data: {
-							txs: [];
-						};
-			
-						evidence: {
-							evidence: [];
-						};
-			
-						last_commit: {
-							height: `${bigint}`;
-							round: number;
-							block_id: BlockIdFrag;
-							signatures: {
-								block_id_flag: number;
-								validator_address: string;
-								timestamp: string;
-								signature: string;
-							}[];
-						};
+						result_begin_block: {};
+						result_end_block: {};
 					};
-					result_begin_block: {};
-					result_end_block: {};
 				};
 			};
-		};
-	}>(d_event.data);
+		}>(d_event.data);
 
-	// get block height
-	const {
-		height: sg_height,
-		time: sx_time,
-	} = g_data?.result?.data?.value?.block?.header || {};
+		// get block height
+		const {
+			height: sg_height,
+			time: sx_time,
+		} = g_data?.result?.data?.value?.block?.header || {};
 
+		// check queue
+		void check_queue(sg_height);
+
+		// set a timeout to terminate the socket if nothing happens
+		i_terminate = setTimeout(() => {
+			// indicate this executed
+			i_terminate = 0;
+
+			// try to kill the socket
+			try_sync(() => k_ws?.ws().close());
+			
+			// switch to manual interval mode
+			check_queue_regularly();
+		}, 60e3);
+	}, (d_close) => {
+		console.warn(`WebSocket subscription to new blocks terminated`);
+
+		// cancel the termination timeout for now
+		clearTimeout(i_terminate);
+
+		// a close event was emitted
+		if(d_close) console.warn(`Reason: ${d_close.reason}`);
+
+		// try to recreate the WebSocket manually
+		void subscribe_new_blocks();
+
+		// do not recreate the WebSocket automatically
+		return 0;
+	}));
+
+	// failed to subscribe in the allotted time
+	if(b_timed_out) {
+		check_queue_regularly();
+	}
+}
+
+// start reacting to new blocks
+subscribe_new_blocks();
+
+// check the queue procedure
+async function check_queue(sg_height='X') {
 	// clearing
 	if(c_clearing > 0) {
 		// verbose
@@ -300,7 +367,7 @@ await TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
 		// wait for next block to clear account sequence
 		c_clearing = 1;
 	}
-}, 1);
+}
 
 // enqueue a message to be signed and broadcasted in next transaction
 export async function enqueue(
