@@ -55,7 +55,7 @@ if(!XG_ALLOWANCE) {
 const S_MEMO = process.env.FEEGRANT_MEMO || '';
 
 // gas limits
-const XG_LIMIT_GRANT = 17_000n;
+const XG_LIMIT_GRANT = 16_000n;
 const XG_LIMIT_REVOKE = 15_000n;
 
 // create server's feegranter wallet
