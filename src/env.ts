@@ -6,6 +6,7 @@ declare global {
 		interface ProcessEnv {
 			SERVER_SK: NaiveHexMixed;
 			SECRET_LCD: TrustedContextUrl;
+			SECRET_LCD_REQUEST_ORIGIN_HEADER?: string | undefined;
 			SECRET_RPC: TrustedContextUrl;
 			GAS_PRICE: WeakUintStr;
 			ALLOWANCE_AMOUNT: WeakUintStr;

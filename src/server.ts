@@ -1,5 +1,5 @@
-import type {SlimAuthInfo, TxResultTuple, WeakSecretAccAddr} from '@solar-republic/neutrino';
-import type {WeakAccountAddr, WeakUintStr} from '@solar-republic/types';
+import type {SlimAuthInfo, TxResultTuple,} from '@solar-republic/neutrino';
+import type {WeakAccountAddr, WeakUintStr, WeakSecretAccAddr} from '@solar-republic/types';
 
 import {__UNDEFINED, assign, concat_entries, defer, die, entries, hex_to_bytes, parse_json_safe, remove, stringify_json, timeout_exec, try_sync, type Dict} from '@blake.regalia/belt';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
@@ -62,8 +62,14 @@ const XG_LIMIT_REVOKE = 15_000n;
 const k_wallet = await Wallet(
 	hex_to_bytes(process.env.SERVER_SK),
 	'secret-4',
-	process.env.SECRET_LCD,
-	process.env.SECRET_RPC,
+	{
+		origin: P_LCD_SECRET,
+		headers: {
+			origin: process.env.SECRET_LCD_REQUEST_ORIGIN_HEADER || 'starshell.net',
+		},
+	},
+	P_RPC_SECRET,
+	[X_GAS_PRICE, 'uscrt'],
 	'secret'
 );
 
@@ -318,7 +324,7 @@ async function check_queue(sg_height='X') {
 				const xg_limit = a_dequeued.reduce((xg_sum, [, xg]) => xg_sum + xg, 0n);
 
 				// create and sign tx
-				const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, a_msgs, exec_fees(xg_limit, X_GAS_PRICE), `${xg_limit}`, z_auth, S_MEMO);
+				const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, a_msgs, `${xg_limit}`, __UNDEFINED, z_auth, S_MEMO);
 
 				// broadcast
 				a_results = await broadcast_result(k_wallet, atu8_raw, si_txn, K_TEF_SECRET);
@@ -486,7 +492,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 	}
 
 	// check if user has existing feegrant
-	const [,, g_res_allowance] = await queryCosmosFeegrantAllowance(k_wallet.lcd, k_wallet.addr, sa_grantee);
+	const [g_res_allowance] = await queryCosmosFeegrantAllowance(k_wallet.lcd, k_wallet.addr, sa_grantee);
 
 	// existing feegrant
 	if(g_res_allowance?.allowance) {
