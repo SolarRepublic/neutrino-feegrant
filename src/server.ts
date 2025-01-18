@@ -1,17 +1,19 @@
-import type {SlimAuthInfo, TxResultTuple,} from '@solar-republic/neutrino';
+/* eslint-disable no-console */
+import type {SlimAuthInfo, TxResponseTuple} from '@solar-republic/neutrino';
 import type {WeakAccountAddr, WeakUintStr, WeakSecretAccAddr} from '@solar-republic/types';
 
-import {__UNDEFINED, assign, concat_entries, defer, die, entries, hex_to_bytes, parse_json_safe, remove, stringify_json, timeout_exec, try_sync, type Dict} from '@blake.regalia/belt';
+import assert from 'assert';
+
+import {__UNDEFINED, defer, die, hex_to_bytes, is_error, parse_json_safe, remove, stringify_json, timeout, timeout_exec, try_async, try_sync, type Dict} from '@blake.regalia/belt';
+import {safe_bytes_to_base64} from '@solar-republic/cosmos-grpc';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_BASIC_ALLOWANCE, anyBasicAllowance, type CosmosFeegrantBasicAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/feegrant';
+import {queryCosmosFeegrantAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/query';
 import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE, encodeCosmosFeegrantMsgGrantAllowance, encodeCosmosFeegrantMsgRevokeAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/tx';
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
 
 import {bech32_decode} from '@solar-republic/crypto';
-import {TendermintEventFilter, TendermintWs, Wallet, auth, broadcast_result, create_and_sign_tx_direct, exec_fees} from '@solar-republic/neutrino';
-import fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
-import {queryCosmosFeegrantAllowance} from '@solar-republic/cosmos-grpc/cosmos/feegrant/v1beta1/query';
-import assert from 'assert';
-import { safe_bytes_to_base64 } from '@solar-republic/cosmos-grpc';
+import {TendermintEventFilter, TendermintWs, Wallet, auth, broadcast_result, create_and_sign_tx_direct} from '@solar-republic/neutrino';
+import fastify, {type FastifyReply, type FastifyRequest} from 'fastify';
 
 type BlockIdFrag = {
 	hash: string;
@@ -19,7 +21,7 @@ type BlockIdFrag = {
 		total: number;
 		hash: string;
 	};
-}
+};
 
 // check server secret key
 const SB16_SERVER_SK = (process.env.SERVER_SK || '').replace(/^0x/, '');
@@ -51,17 +53,20 @@ if(!XG_ALLOWANCE) {
 	throw Error(`Invalid allowance amount setting: ${XG_ALLOWANCE}; try setting env var ALLOWANCE_AMOUNT=500000`);
 }
 
+// chain ID
+const SI_CHAIN_ID = process.env.CHAIN_ID || 'secret-4';
+
 // set optional memo
 const S_MEMO = process.env.FEEGRANT_MEMO || '';
 
 // gas limits
-const XG_LIMIT_GRANT = 16_000n;
-const XG_LIMIT_REVOKE = 15_000n;
+const XG_LIMIT_GRANT = BigInt(process.env.FEEGRANT_GAS_LIMIT_GRANT || 16_000n);
+const XG_LIMIT_REVOKE = BigInt(process.env.FEEGRANT_GAS_LIMIT_REVOKE || 15_000n);
 
 // create server's feegranter wallet
 const k_wallet = await Wallet(
-	hex_to_bytes(process.env.SERVER_SK),
-	'secret-4',
+	hex_to_bytes(SB16_SERVER_SK),
+	SI_CHAIN_ID,
 	{
 		origin: P_LCD_SECRET,
 		headers: {
@@ -83,7 +88,7 @@ const y_fastify = fastify({
 
 
 // check interval
-let i_regularly_check: NodeJS.Timeout | number = 0;
+let i_regularly_check: NodeJS.Timeout | number = 0;  // eslint-disable-line @typescript-eslint/naming-convention
 
 // regularly check the queue at ideal block time
 function check_queue_regularly() {
@@ -111,7 +116,7 @@ const a_enqueued: Enqueued[] = [];
 let c_clearing = 0;
 
 // termination timeout
-let i_terminate: NodeJS.Timeout | number = 0;
+let i_terminate: NodeJS.Timeout | number = 0;  // eslint-disable-line @typescript-eslint/naming-convention
 
 // subscribe to new blocks and use that as the basis for broadcasts
 async function subscribe_new_blocks() {
@@ -119,7 +124,8 @@ async function subscribe_new_blocks() {
 	clearInterval(i_regularly_check);
 
 	// monitor when new block occurs
-	const [k_ws, b_timed_out] = await timeout_exec(30e3, () => TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, async(d_event) => {
+	// eslint-disable-next-line @typescript-eslint/naming-convention
+	const [[k_ws, e_open]=[], b_timed_out] = await timeout_exec(30e3, () => try_async(() => TendermintWs(P_RPC_SECRET, `tm.event='NewBlock'`, (d_event) => {
 		// cancel termination timeout
 		clearTimeout(i_terminate);
 
@@ -147,15 +153,15 @@ async function subscribe_new_blocks() {
 								evidence_hash: string;
 								proposer_address: string;
 							};
-				
+
 							data: {
 								txs: [];
 							};
-				
+
 							evidence: {
 								evidence: [];
 							};
-				
+
 							last_commit: {
 								height: `${bigint}`;
 								round: number;
@@ -191,11 +197,12 @@ async function subscribe_new_blocks() {
 
 			// try to kill the socket
 			try_sync(() => k_ws?.ws().close());
-			
+
 			// switch to manual interval mode
 			check_queue_regularly();
 		}, 60e3);
 	}, (d_close) => {
+		// warn
 		console.warn(`WebSocket subscription to new blocks terminated`);
 
 		// cancel the termination timeout for now
@@ -205,14 +212,17 @@ async function subscribe_new_blocks() {
 		i_terminate = 0;
 
 		// a close event was emitted
-		if(d_close) console.warn(`Reason: ${d_close.reason}`);
+		if(d_close) console.warn(`Close event received. Type: "${d_close.type}". Reason: "${d_close.reason}".`);
+
+		// warn
+		console.warn(`Attempting to recreate WebSocket subscription...`);
 
 		// try to recreate the WebSocket manually
 		void subscribe_new_blocks();
 
 		// do not recreate the WebSocket automatically
 		return 0;
-	}));
+	})));
 
 	// failed to subscribe in the allotted time
 	if(b_timed_out) {
@@ -221,13 +231,25 @@ async function subscribe_new_blocks() {
 
 		// try again in a minute
 		setTimeout(() => {
-			subscribe_new_blocks();
+			void subscribe_new_blocks();
 		}, 60e3);
+	}
+	// did not time out but failed to connect/open WebSocket
+	else if(!k_ws) {
+		// warn
+		console.warn(`Failed to connect/open WebSocket: ${is_error(e_open)? e_open.stack || e_open.message: e_open+''}`);
+		console.warn('Waiting 30s before attempting to recreate WebSocket subscription...');
+
+		// wait
+		await timeout(30e3);
+
+		// retry
+		void subscribe_new_blocks();
 	}
 }
 
 // start reacting to new blocks
-subscribe_new_blocks();
+void subscribe_new_blocks();
 
 // check the queue procedure
 async function check_queue(sg_height='X') {
@@ -278,7 +300,7 @@ async function check_queue(sg_height='X') {
 				const as_msgs = new Set<string>();
 
 				// concat all messages
-				const a_msgs = a_dequeued.reduce((a_out, a_queued) => {
+				const a_msgs = a_dequeued.reduce<Uint8Array[]>((a_out, a_queued) => {
 					// destructure
 					const [atu8_msg,,, sa_grantee] = a_queued;
 
@@ -318,19 +340,19 @@ async function check_queue(sg_height='X') {
 
 					// accumulate
 					return a_out;
-				}, [] as Uint8Array[]);
+				}, []);
 
 				// compute sum of limits
 				const xg_limit = a_dequeued.reduce((xg_sum, [, xg]) => xg_sum + xg, 0n);
 
 				// create and sign tx
-				const [atu8_raw, atu8_signdoc, si_txn] = await create_and_sign_tx_direct(k_wallet, a_msgs, `${xg_limit}`, __UNDEFINED, z_auth, S_MEMO);
+				const [atu8_raw, sb16_txn, atu8_signdoc, atu8_signature] = await create_and_sign_tx_direct(k_wallet, a_msgs, `${xg_limit}`, __UNDEFINED, z_auth, S_MEMO);
 
 				// broadcast
-				a_results = await broadcast_result(k_wallet, atu8_raw, si_txn, K_TEF_SECRET);
+				a_results = await broadcast_result(k_wallet, atu8_raw, sb16_txn, K_TEF_SECRET);
 
 				// destructure
-				const [xc_code, sx_res, g_meta] = a_results;
+				const [xc_code, sx_res,, g_meta] = a_results;
 
 				// error
 				if(xc_code) {
@@ -368,11 +390,16 @@ async function check_queue(sg_height='X') {
 
 							break;
 						}
+
+						case __UNDEFINED:
+						default: {
+							// ignore
+						}
 					}
 				}
 				// success
 				else {
-					console.log(`✅ ${si_txn}: [${a_dequeued.map(([,,, sa_grantee]) => sa_grantee).join(', ')}]`);
+					console.log(`✅ ${sb16_txn}: [${a_dequeued.map(([,,, sa_grantee]) => sa_grantee).join(', ')}]`);
 				}
 
 				// un-postpone
@@ -411,8 +438,8 @@ async function check_queue(sg_height='X') {
 export async function enqueue(
 	atu8_msg: Uint8Array,
 	xg_limit: bigint,
-	sa_grantee: WeakAccountAddr,
-): Promise<TxResultTuple> {
+	sa_grantee: WeakAccountAddr
+): Promise<TxResponseTuple> {
 	// create deferred Promise
 	const [dp_granted, fke_granted] = defer();
 
@@ -485,7 +512,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 		const atu8_data = bech32_decode(sa_grantee);
 		assert(20 === atu8_data.length);
 	}
-	catch(e_decode) {
+	catch(_e_decode) {
 		return d_res.code(400).send({
 			error: 'Invalid bech32 address',
 		});
@@ -526,7 +553,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 				});
 			}
 		}
-	
+
 		// revoke previous allowance
 		const atu8_msg = encodeGoogleProtobufAny(
 			SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE,
@@ -537,18 +564,18 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 		);
 
 		// execute revocation
-		const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_REVOKE, sa_grantee);
+		const [xc_code, s_error, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_REVOKE, sa_grantee);
 
 		// error revoking
 		if(xc_code) {
 			return d_res.code(425).send({
-				error: `Failed to revoke existing feegrant; reason: ${sx_res}`,
+				error: `Failed to revoke existing feegrant; reason: ${s_error}`,
 			});
 		}
 	}
 
 	// generate message
-	const atu8_msg =  encodeGoogleProtobufAny(
+	const atu8_msg = encodeGoogleProtobufAny(
 		SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE,
 		encodeCosmosFeegrantMsgGrantAllowance(
 			k_wallet.addr,
@@ -560,12 +587,12 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 	);
 
 	// broadcast
-	const [xc_code, sx_res, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_GRANT, sa_grantee);
+	const [xc_code, s_error, g_meta, atu8_result, h_events] = await enqueue(atu8_msg, XG_LIMIT_GRANT, sa_grantee);
 
 	// failed
 	if(xc_code) {
 		console.error(`<== 550 to ${sa_grantee}`);
-		return d_res.code(550).send(parse_json_safe(sx_res) || sx_res);
+		return d_res.code(550).send(parse_json_safe(s_error) || s_error);
 	}
 
 	// success
@@ -581,7 +608,7 @@ y_fastify.listen({
 	port: parseInt(process.env.SERVER_PORT || '3001'),
 }, (e_report) => {
 	if(!e_report) {
-		console.log(`Feegrant wallet address: ${k_wallet.addr}`);
+		console.log(`Feegrant wallet address: ${k_wallet.addr} on ${SI_CHAIN_ID}`);
 	}
 	else {
 		console.error(e_report);

@@ -5,38 +5,40 @@
   "description": "",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc && tsc-esm-fix --target=dist",
+    "build-app": "tsc && tsc-esm-fix --target=dist",
+    "build-docker": "docker build -t ghcr.io/solarrepublic/neutrino-feegrant .",
+    "build": "pnpm run build-app",
     "start": "node --env-file=.env dist/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@blake.regalia/belt": "^0.45.3",
-    "@solar-republic/cosmos-grpc": "^0.18.0-beta.6",
-    "@solar-republic/crypto": "^0.2.14",
-    "@solar-republic/neutrino": "^1.7.0-beta.24",
-    "fastify": "^4.28.1"
+    "@blake.regalia/belt": "^0.54.1",
+    "@solar-republic/cosmos-grpc": "^0.18.0",
+    "@solar-republic/crypto": "^0.4.0",
+    "@solar-republic/neutrino": "^1.8.8",
+    "fastify": "^5.2.1"
   },
   "devDependencies": {
-    "@blake.regalia/tsconfig": "^0.2.0",
-    "@solar-republic/types": "^0.3.4",
+    "@blake.regalia/tsconfig": "^0.3.7",
+    "@solar-republic/types": "^0.3.9",
     "@types/chai": "^5.0.1",
-    "@types/chrome": "^0.0.287",
-    "@types/node": "^22.10.1",
-    "@types/web": "^0.0.186",
-    "@typescript-eslint/parser": "^8.0.1",
-    "chai": "^5.1.1",
+    "@types/chrome": "^0.0.297",
+    "@types/node": "^22.10.7",
+    "@types/web": "^0.0.196",
+    "@typescript-eslint/parser": "^8.20.0",
+    "chai": "^5.1.2",
     "chai-bites": "^0.2.0",
     "esformatter": "^0.11.3",
-    "eslint": "^8.57.0",
+    "eslint": "^9.18.0",
     "ts-node": "^10.9.2",
     "ts-toolbelt": "^9.6.0",
-    "tsc-esm-fix": "^2.20.27",
+    "tsc-esm-fix": "^3.1.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.7.2",
-    "vite": "^5.4.0",
-    "vitest": "^1.6.0"
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vitest": "^3.0.2"
   },
   "packageManager": "pnpm@9.0.6+sha1.648f6014eb363abb36618f2ba59282a9eeb3e879"
 }
