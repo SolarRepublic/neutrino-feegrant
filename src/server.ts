@@ -12,7 +12,7 @@ import {SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE, SI_MESSAGE_TYPE_COS
 import {encodeGoogleProtobufAny} from '@solar-republic/cosmos-grpc/google/protobuf/any';
 
 import {bech32_decode} from '@solar-republic/crypto';
-import {TendermintEventFilter, TendermintWs, Wallet, auth, broadcast_result, create_and_sign_tx_direct} from '@solar-republic/neutrino';
+import {TendermintEventFilter, TendermintWs, CosmosSigner, auth, broadcast_result, create_and_sign_tx_direct} from '@solar-republic/neutrino';
 import fastify, {type FastifyReply, type FastifyRequest} from 'fastify';
 
 type BlockIdFrag = {
@@ -63,8 +63,8 @@ const S_MEMO = process.env.FEEGRANT_MEMO || '';
 const XG_LIMIT_GRANT = BigInt(process.env.FEEGRANT_GAS_LIMIT_GRANT || 16_000n);
 const XG_LIMIT_REVOKE = BigInt(process.env.FEEGRANT_GAS_LIMIT_REVOKE || 15_000n);
 
-// create server's feegranter wallet
-const k_wallet = await Wallet(
+// create server's feegranter signer
+const k_signer = await CosmosSigner(
 	hex_to_bytes(SB16_SERVER_SK),
 	SI_CHAIN_ID,
 	{
@@ -346,10 +346,10 @@ async function check_queue(sg_height='X') {
 				const xg_limit = a_dequeued.reduce((xg_sum, [, xg]) => xg_sum + xg, 0n);
 
 				// create and sign tx
-				const [atu8_raw, sb16_txn, atu8_signdoc, atu8_signature] = await create_and_sign_tx_direct(k_wallet, a_msgs, `${xg_limit}`, __UNDEFINED, z_auth, S_MEMO);
+				const [atu8_raw, sb16_txn, atu8_signdoc, atu8_signature] = await create_and_sign_tx_direct(k_signer, a_msgs, `${xg_limit}`, __UNDEFINED, z_auth, S_MEMO);
 
 				// broadcast
-				a_results = await broadcast_result(k_wallet, atu8_raw, sb16_txn, K_TEF_SECRET);
+				a_results = await broadcast_result(k_signer, atu8_raw, sb16_txn, K_TEF_SECRET);
 
 				// destructure
 				const [xc_code, sx_res,, g_meta] = a_results;
@@ -374,7 +374,7 @@ async function check_queue(sg_height='X') {
 									const m_expected = /expected (\d+)/.exec(g_meta.log || '');
 									if(m_expected) {
 										// fetch auth
-										const a_auth = await auth(k_wallet);
+										const a_auth = await auth(k_signer);
 
 										// set auth
 										z_auth = [a_auth[0], m_expected[1] as WeakUintStr];
@@ -519,7 +519,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 	}
 
 	// check if user has existing feegrant
-	const [g_res_allowance] = await queryCosmosFeegrantAllowance(k_wallet.lcd, k_wallet.addr, sa_grantee);
+	const [g_res_allowance] = await queryCosmosFeegrantAllowance(k_signer.lcd, k_signer.addr, sa_grantee);
 
 	// existing feegrant
 	if(g_res_allowance?.allowance) {
@@ -558,7 +558,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 		const atu8_msg = encodeGoogleProtobufAny(
 			SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_REVOKE_ALLOWANCE,
 			encodeCosmosFeegrantMsgRevokeAllowance(
-				k_wallet.addr,
+				k_signer.addr,
 				sa_grantee
 			)
 		);
@@ -578,7 +578,7 @@ async function claim(d_req: FastifyRequest, d_res: FastifyReply, sa_grantee: Wea
 	const atu8_msg = encodeGoogleProtobufAny(
 		SI_MESSAGE_TYPE_COSMOS_FEEGRANT_MSG_GRANT_ALLOWANCE,
 		encodeCosmosFeegrantMsgGrantAllowance(
-			k_wallet.addr,
+			k_signer.addr,
 			sa_grantee,
 			anyBasicAllowance([
 				[`${500000n}`, 'uscrt'],
@@ -608,7 +608,7 @@ y_fastify.listen({
 	port: parseInt(process.env.SERVER_PORT || '3001'),
 }, (e_report) => {
 	if(!e_report) {
-		console.log(`Feegrant wallet address: ${k_wallet.addr} on ${SI_CHAIN_ID}`);
+		console.log(`Feegrant wallet address: ${k_signer.addr} on ${SI_CHAIN_ID}`);
 	}
 	else {
 		console.error(e_report);
