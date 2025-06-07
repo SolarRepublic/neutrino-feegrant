@@ -17,28 +17,28 @@
     "@blake.regalia/belt": "^0.57.2",
     "@solar-republic/cosmos-grpc": "^0.19.1",
     "@solar-republic/crypto": "^0.5.2",
-    "@solar-republic/neutrino": "^1.8.11",
-    "fastify": "^5.3.2"
+    "@solar-republic/neutrino": "^1.8.12",
+    "fastify": "^5.3.3"
   },
   "devDependencies": {
     "@blake.regalia/tsconfig": "^0.3.7",
     "@solar-republic/types": "^0.3.9",
-    "@types/chai": "^5.2.1",
-    "@types/chrome": "^0.0.317",
-    "@types/node": "^22.15.3",
-    "@types/web": "^0.0.227",
-    "@typescript-eslint/parser": "^8.31.1",
+    "@types/chai": "^5.2.2",
+    "@types/chrome": "^0.0.326",
+    "@types/node": "^22.15.30",
+    "@types/web": "^0.0.239",
+    "@typescript-eslint/parser": "^8.33.1",
     "chai": "^5.2.0",
     "chai-bites": "^0.2.0",
     "esformatter": "^0.11.3",
-    "eslint": "^9.25.1",
+    "eslint": "^9.28.0",
     "ts-node": "^10.9.2",
     "ts-toolbelt": "^9.6.0",
     "tsc-esm-fix": "^3.1.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.3",
-    "vite": "^6.3.3",
-    "vitest": "^3.1.2"
+    "vite": "^6.3.5",
+    "vitest": "^3.2.2"
   },
-  "packageManager": "pnpm@10.10.0"
+  "packageManager": "pnpm@10.11.1"
 }
