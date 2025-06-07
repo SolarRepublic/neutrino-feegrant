@@ -26,7 +26,7 @@ type BlockIdFrag = {
 // check feegrant secret key
 const SB16_FEERANT_SK = (process.env.FEEGRANT_SECRET_KEY_HEX || '').replace(/^0x/, '');
 if(64 !== SB16_FEERANT_SK.length) {
-	throw Error(`Invalid feegrant secret key; must be 64 hexadecimal digits. FEEGRANT_SECRET_KEY_HEX is ${SB16_FEERANT_SK? 'the wrong length': 'empty'}`);
+	throw Error(`Invalid feegrant secret key; must be 64 hexadecimal digits. FEEGRANT_SECRET_KEY_HEX is ${SB16_FEERANT_SK? `the wrong length (${SB16_FEERANT_SK.length})`: 'empty'}`);
 }
 
 // check LCD
