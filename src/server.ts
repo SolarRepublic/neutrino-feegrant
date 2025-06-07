@@ -23,10 +23,10 @@ type BlockIdFrag = {
 	};
 };
 
-// check server secret key
-const SB16_SERVER_SK = (process.env.SERVER_SK || '').replace(/^0x/, '');
-if(64 !== SB16_SERVER_SK.length) {
-	throw Error(`Invalid server secret key; must be 64 hexadecimal digits. SERVER_SK is ${SB16_SERVER_SK? 'the wrong length': 'empty'}`);
+// check feegrant secret key
+const SB16_FEERANT_SK = (process.env.FEEGRANT_SECRET_KEY_HEX || '').replace(/^0x/, '');
+if(64 !== SB16_FEERANT_SK.length) {
+	throw Error(`Invalid feegrant secret key; must be 64 hexadecimal digits. FEEGRANT_SECRET_KEY_HEX is ${SB16_FEERANT_SK? 'the wrong length': 'empty'}`);
 }
 
 // check LCD
@@ -65,7 +65,7 @@ const XG_LIMIT_REVOKE = BigInt(process.env.FEEGRANT_GAS_LIMIT_REVOKE || 15_000n)
 
 // create server's feegranter signer
 const k_signer = await CosmosSigner(
-	hex_to_bytes(SB16_SERVER_SK),
+	hex_to_bytes(SB16_FEERANT_SK),
 	SI_CHAIN_ID,
 	{
 		origin: P_LCD_SECRET,

@@ -4,7 +4,7 @@ import type {TrustedContextUrl, WeakUintStr} from '@solar-republic/types';
 declare global {
 	namespace NodeJS {
 		interface ProcessEnv {
-			SERVER_SK: NaiveHexMixed;
+			FEEGRANT_SECRET_KEY_HEX: NaiveHexMixed;
 			SECRET_LCD: TrustedContextUrl;
 			SECRET_LCD_REQUEST_ORIGIN_HEADER?: string | undefined;
 			SECRET_RPC: TrustedContextUrl;
