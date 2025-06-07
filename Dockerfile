@@ -62,7 +62,7 @@ COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
 
 # TODO: use docker secret mounts
-ENV SERVER_SK=""
+ENV FEEGRANT_SECRET_KEY_HEX=""
 ENV SECRET_LCD=""
 ENV SECRET_LCD_REQUEST_ORIGIN_HEADER=""
 ENV SECRET_RPC=""

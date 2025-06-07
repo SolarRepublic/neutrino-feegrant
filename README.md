@@ -4,7 +4,7 @@ Simple, bare bones, performant Feegrant API built on [Neutrino](https://github.c
 
 ```sh
 docker run --rm -t feegrant \
-    -e SERVER_SK "${FEEGRANT_SECRET_KEY_HEX}" \
+    -e FEEGRANT_SECRET_KEY_HEX "${FEEGRANT_SECRET_KEY_HEX}" \
     -e SECRET_LCD=http://url-to-lcd \
     -e SECRET_RPC=http://url-to-rpc \
 	 -e GAS_PRICE=0.1
@@ -34,7 +34,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      SERVER_SK: "${FEEGRANT_SECRET_KEY_HEX}"
+      FEEGRANT_SECRET_KEY_HEX: "${FEEGRANT_SECRET_KEY_HEX}"
       SECRET_LCD: http://balancer:8443/secret-lcd
       SECRET_RPC: http://balancer:8443/secret-rpc
       GAS_PRICE: 0.1
