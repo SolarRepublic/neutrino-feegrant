@@ -27,19 +27,19 @@
     "@types/chai": "^5.2.3",
     "@types/chrome": "^0.1.27",
     "@types/node": "^24.9.2",
-    "@types/web": "^0.0.285",
+    "@types/web": "^0.0.288",
     "@typescript-eslint/parser": "^8.46.2",
     "chai": "^6.2.0",
     "chai-bites": "^0.2.0",
     "esformatter": "^0.11.3",
-    "eslint": "^9.38.0",
+    "eslint": "^9.39.0",
     "ts-node": "^10.9.2",
     "ts-toolbelt": "^9.6.0",
     "tsc-esm-fix": "^3.1.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.12",
-    "vitest": "^4.0.4"
+    "vitest": "^4.0.6"
   },
   "packageManager": "pnpm@10.20.0"
 }

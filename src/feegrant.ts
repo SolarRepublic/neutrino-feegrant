@@ -520,6 +520,17 @@ async function check_queue(sg_height='X') {
 									}
 								}
 							}
+							// something reverted
+							else if(38 === g_meta.code) {
+								// normalize error message
+								const s_error = sx_res || g_meta.log || '';
+
+								// parse message index
+								const m_index = /message index: (\d+)/.exec(s_error);
+								if(m_index) {
+									console.warn(`Failed to parse message index: ${m_index[1]}: ${s_error}`);
+								}
+							}
 
 							break;
 						}
